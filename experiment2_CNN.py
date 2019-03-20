@@ -7,11 +7,12 @@ import os
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 from tensorflow.examples.tutorials.mnist import input_data
-
+import cv2
 # Get the MNIST data
 #mnist = input_data.read_data_sets('./Data', one_hot=True)
 from data_utilities import list_filenames, load_images
-path = "./Data/LLD-logo_sample/"
+# path = "./Data/LLD-logo_sample/"
+path = "./Data/LLD-logo-files/"
 filenames = list_filenames(path)
 
 # All images within dataframe
@@ -62,31 +63,63 @@ def generate_image_grid(sess, df, filenames,resolution,batch_size,op, op2):
 
     """ grid """
     input_x = sess.run(op2, feed_dict={x_input: df[0:batch_size]})
+    plt.figure(figsize=(2,9))
     for i, g in enumerate(gs):
 
         x = sess.run(op, feed_dict={decoder_input: input_x[i].reshape((-1,15,15,32))})
         ax = plt.subplot(g)
-        print(x.shape)
+
         img = np.array(x).reshape(resolution,resolution,3)
-        ax.imshow(img)
+        img = cv2.resize(img, (400, 400))
+
+        ax.imshow(img, interpolation='nearest', aspect='auto')
         ax.set_xticks([])
         ax.set_yticks([])
-        ax.set_aspect('auto')
+        #ax.set_aspect('auto')
         ax.set_title(filenames[i])
-    plt.tight_layout()
-    plt.show()
+    plt.savefig('./experiment_2_results/generated.png')
+    #plt.tight_layout()
+    #plt.show()
 
+    print(input_x[0].ravel().shape)
+
+    plt.figure(figsize=(2,9))
     for i, g in enumerate(gs):
 
         ax = plt.subplot(g)
         img = np.array(df[i])
-        ax.imshow(img)
+        img = cv2.resize(img, (400, 400))
+        ax.imshow(img,interpolation='nearest', aspect='auto')
         ax.set_xticks([])
         ax.set_yticks([])
-        ax.set_aspect('auto')
+        #ax.set_aspect('auto')
         ax.set_title(filenames[i])
-    plt.tight_layout()
+    plt.savefig('./experiment_2_results/original.png')
+    #plt.tight_layout()
+    #plt.show()
+
+    plt.close()
+    from sklearn.manifold import TSNE
+
+    X_embedded = TSNE(n_components=2).fit_transform(input_x.reshape(-1,7200))
+    X_embedded = X_embedded.reshape(2,-1)
+    # print(len(X_embedded[0]))
+    # plt.close()
+    # plt.scatter(X_embedded[0],X_embedded[1])
+    # plt.show()
+    def getImage(path,zoom=0.07):
+        return OffsetImage(plt.imread(path),zoom=zoom)
+    from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+    fig, ax = plt.subplots()
+    ax.scatter(X_embedded[0],X_embedded[1])
+
+    artists = []
+    for x0, y0, path in zip(X_embedded[0], X_embedded[1],filenames[0:batch_size]):
+        ab = AnnotationBbox(getImage(str('./Data/LLD-logo_sample/'+path)), (x0, y0), frameon=False)
+        artists.append(ax.add_artist(ab))
     plt.show()
+
+
 
 
 def form_results():
